@@ -1,0 +1,89 @@
+package com.backendlld.userservice.services;
+
+import com.backendlld.userservice.exceptions.InvalidTokenException;
+import com.backendlld.userservice.exceptions.InvalidUserNameOrPasswordException;
+import com.backendlld.userservice.exceptions.UserNotFoundException;
+import com.backendlld.userservice.models.Token;
+import com.backendlld.userservice.models.User;
+import com.backendlld.userservice.repositories.TokenRepository;
+import com.backendlld.userservice.repositories.UserRepository;
+import lombok.AllArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.Date;
+import java.util.Optional;
+
+@Service
+@AllArgsConstructor
+public class UserServiceImpl implements UserService {
+    private final UserRepository userRepository;
+    private final TokenRepository tokenRepository;
+//    passwordencoder cant be autowired directly without configuring security configuration so
+//    we have to create a bean for it in security config class
+    private final PasswordEncoder passwordEncoder;
+    @Override
+    public Token login(String email, String password) throws UserNotFoundException, InvalidUserNameOrPasswordException {
+        Optional<User> user = userRepository.findByEmail(email);
+        if (user.isPresent()) {
+            User existingUser = user.get();
+            if (passwordEncoder.matches(password, existingUser.getPassword())) {
+                // In real application, generate JWT or session token here
+                Token token = new Token();
+                token.setTokenValue("dummy-token-for-" + existingUser.getUsername());
+                token.setUser(existingUser);
+                Date expiry = Date.from(LocalDateTime.now().plusDays(30)
+                        .atZone(ZoneId.systemDefault())
+                        .toInstant());
+                token.setExpiryDate(expiry);
+                return tokenRepository.save(token);
+            } else {
+                throw new InvalidUserNameOrPasswordException("Invalid username or password");
+            }
+        } else {
+//            redirect to signup page
+            throw new UserNotFoundException("User not found with email: " + email);
+        }
+    }
+
+    @Override
+    public User signup(String name, String email, String password) {
+        Optional<User> user = userRepository.findByEmail(email);
+        if (user.isPresent()) {
+//            we should not throw error here instead we should redirect to login page.
+//            throw new RuntimeException("User already exists with email: " + email);
+            return user.get();
+        }
+        User newUser = new User();
+        newUser.setUsername(name);
+        newUser.setEmail(email);
+        //TODO:need to set roles as well
+        newUser.setPassword(passwordEncoder.encode(password)); // In real application, password should be hashed
+        return userRepository.save(newUser);
+    }
+
+    @Override
+    public void logOut(String tokenValue) {
+        Optional<Token> token = tokenRepository.findByTokenValue(tokenValue);
+        if(token.isEmpty()){
+            throw new RuntimeException("Invalid token");
+        }
+        token.get().setDeleted(true);
+        tokenRepository.save(token.get());
+    }
+
+    @Override
+    public User validateToken(String tokenValue) throws InvalidTokenException{
+        Optional<Token> token = tokenRepository.findByTokenValueAndDeletedFalseAndExpiryDateGreaterThan(
+                tokenValue,
+                new Date()
+        );
+        if(token.isEmpty()){
+            throw new InvalidTokenException("Token is invalid or expired");
+        }
+        return token.get().getUser();
+
+    }
+}

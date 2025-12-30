@@ -10,7 +10,7 @@ import java.util.List;
 @Getter
 @Setter
 @Entity(name = "roles")
-public class Role extends Base{
+public class Role extends BaseModel {
     private String value;
 
     @ManyToMany(mappedBy = "roles")
