@@ -8,11 +8,13 @@ import com.backendlld.userservice.models.User;
 import com.backendlld.userservice.repositories.TokenRepository;
 import com.backendlld.userservice.repositories.UserRepository;
 import lombok.AllArgsConstructor;
+import org.apache.commons.lang3.RandomStringUtils;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.Optional;
 
@@ -32,7 +34,7 @@ public class UserServiceImpl implements UserService {
             if (passwordEncoder.matches(password, existingUser.getPassword())) {
                 // In real application, generate JWT or session token here
                 Token token = new Token();
-                token.setTokenValue("dummy-token-for-" + existingUser.getUsername());
+                token.setTokenValue(RandomStringUtils.randomAlphanumeric(128));
                 token.setUser(existingUser);
                 Date expiry = Date.from(LocalDateTime.now().plusDays(30)
                         .atZone(ZoneId.systemDefault())
@@ -60,7 +62,8 @@ public class UserServiceImpl implements UserService {
         newUser.setUsername(name);
         newUser.setEmail(email);
         //TODO:need to set roles as well
-        newUser.setPassword(passwordEncoder.encode(password)); // In real application, password should be hashed
+        newUser.setPassword(passwordEncoder.encode(password));
+        newUser.setRoles(new ArrayList<>());
         return userRepository.save(newUser);
     }
 
@@ -71,7 +74,7 @@ public class UserServiceImpl implements UserService {
             throw new RuntimeException("Invalid token");
         }
         token.get().setDeleted(true);
-        tokenRepository.save(token.get());
+        tokenRepository.delete(token.get());
     }
 
     @Override

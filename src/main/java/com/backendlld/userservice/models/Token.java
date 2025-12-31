@@ -14,7 +14,7 @@ import java.util.Date;
 public class Token extends BaseModel {
     private String tokenValue;
     private Date expiryDate;
-    private boolean deleted;
-    @ManyToOne(fetch = FetchType.EAGER)
+//    private boolean deleted;
+    @ManyToOne
     private User user;
 }
