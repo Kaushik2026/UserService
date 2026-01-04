@@ -19,6 +19,12 @@ import org.springframework.web.bind.annotation.*;
 public class UserController {
     private final UserService userService;
 
+    @GetMapping("/../")  // /users/../ = root /
+    public ResponseEntity<String> home() {
+        return ResponseEntity.ok("Scaler Backend API - POST /users/login");
+    }
+
+
     @PostMapping("/login")
     public Token login(@RequestBody LoginRequestDto loginRequestDto) throws  Exception {
         Token token = userService.login(loginRequestDto.getEmail(), loginRequestDto.getPassword());
