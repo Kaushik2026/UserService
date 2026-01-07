@@ -5,6 +5,7 @@ import com.backendlld.userservice.dtos.LoginRequestDto;
 import com.backendlld.userservice.dtos.SignUpRequestDto;
 import com.backendlld.userservice.dtos.UserDto;
 import com.backendlld.userservice.exceptions.InvalidTokenException;
+import com.backendlld.userservice.exceptions.UserAlreadyExistsException;
 import com.backendlld.userservice.models.Token;
 import com.backendlld.userservice.models.User;
 import com.backendlld.userservice.services.UserService;
@@ -12,18 +13,11 @@ import lombok.AllArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-//  http://localhost:8080/users/signup
 @RestController
 @RequestMapping("/users")
 @AllArgsConstructor
 public class UserController {
     private final UserService userService;
-
-    @GetMapping("/../")  // /users/../ = root /
-    public ResponseEntity<String> home() {
-        return ResponseEntity.ok("Scaler Backend API - POST /users/login");
-    }
-
 
     @PostMapping("/login")
     public Token login(@RequestBody LoginRequestDto loginRequestDto) throws  Exception {
@@ -33,24 +27,18 @@ public class UserController {
     }
 
     @PostMapping("/signup")
-    public UserDto signup(@RequestBody SignUpRequestDto signUpRequestDto) {
+    public UserDto signup(@RequestBody SignUpRequestDto signUpRequestDto) throws UserAlreadyExistsException {
 
         User user = userService.signup(
                 signUpRequestDto.getUsername(),
                 signUpRequestDto.getEmail(),
                 signUpRequestDto.getPassword()
         );
-
-//        we will do this in user dto class itself
-//        userDto.setUsername(user.getUsername());
-//        userDto.setEmail(user.getEmail());
-//        userDto.setRoles(user.getRoles());
-
         return UserDto.from(user);
     }
 
-    @GetMapping("/logout")
-    public ResponseEntity<Void> logOut(@RequestBody LogOutRequestDto logOutRequestDto) {
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logOut(@RequestBody LogOutRequestDto logOutRequestDto) throws InvalidTokenException{
         userService.logOut(logOutRequestDto.getTokenValue());
         return ResponseEntity.ok().build();
     }

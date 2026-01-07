@@ -1,6 +1,5 @@
 package com.backendlld.userservice.models;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Entity;
 import jakarta.persistence.ManyToMany;
 import lombok.Getter;
@@ -15,6 +14,5 @@ public class Role extends BaseModel {
     private String value;
 
     @ManyToMany(mappedBy = "roles")
-    @JsonIgnore
     private List<User> user;
 }

@@ -46,7 +46,7 @@ public class SecurityConfig {
     @Order(1)
     public SecurityFilterChain authorizationServerSecurityFilterChain(HttpSecurity http) throws Exception {
         http
-                .securityMatcher("/oauth2/**", "/oidc/**", "/.well-known/**") // ✅ SPECIFIC paths only!
+                .securityMatcher("/oauth2/**", "/oidc/**", "/.well-known/**") // SPECIFIC paths only!
                 .sessionManagement(smg -> smg.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authz -> authz.anyRequest().authenticated())
                 .exceptionHandling(ex -> ex
@@ -65,11 +65,12 @@ public class SecurityConfig {
         http
                 .authorizeHttpRequests(authz -> authz
 //                        .requestMatchers("/error/**", "/login", "/", "/favicon.ico").permitAll()
-                                .requestMatchers("/users/login", "/users/signup").permitAll()
+                                .requestMatchers("/users/login", "/users/signup","/users/logout","/users/validate-token/**").permitAll()
                         .anyRequest().authenticated()
                 )
-                .formLogin(Customizer.withDefaults())
-//                .formLogin(form -> form.disable())
+
+//                .formLogin(Customizer.withDefaults())
+                .formLogin(form -> form.disable())
                 .csrf(AbstractHttpConfigurer::disable); // Disable CSRF for simplicity in this example
         return http.build();
     }
