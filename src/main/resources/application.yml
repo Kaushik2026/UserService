@@ -1,0 +1,27 @@
+#spring:
+#  h2:
+#    console:
+#      enabled: true
+#  datasource:
+#    url: jdbc:h2:mem:testdb
+
+spring.security.oauth2.client:
+  registration:
+    google:
+      client-id: your-google-client-id
+      client-secret: your-google-client-secret
+      scope:
+        - email
+        - profile
+    facebook:
+      client-id: your-facebook-client-id
+      client-secret: your-facebook-client-secret
+      scope:
+        - email
+        - public_profile
+    github:
+      client-id: Ov23likjliPYpotrCMd1
+      client-secret: 130f2bb23650fcbd57f0d049c7265b3d5dab9fa1
+      scope:
+        - read:user
+        - user:email

@@ -1,40 +1,49 @@
 package com.backendlld.userservice.services;
 
-import com.backendlld.userservice.exceptions.*;
+import com.backendlld.userservice.dtos.LoginRequestDto;
+import com.backendlld.userservice.dtos.SignUpRequestDto;
+import com.backendlld.userservice.dtos.LoginResponseDto;
+import com.backendlld.userservice.dtos.UserDto;
 import com.backendlld.userservice.models.Token;
 import com.backendlld.userservice.models.User;
 import com.backendlld.userservice.repositories.TokenRepository;
 import com.backendlld.userservice.repositories.UserRepository;
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.RandomStringUtils;
+import org.modelmapper.ModelMapper;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.Map;
 import java.util.Optional;
 
 @Service
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
     private final TokenRepository tokenRepository;
+
 //    passwordencoder cant be autowired directly without configuring security configuration so
 //    we have to create a bean for it in config class
     private final PasswordEncoder passwordEncoder;
+    private final ModelMapper modelMapper;
+
     @Override
-    public Token login(String email, String password) throws UserNotFoundException, InvalidUserNameOrPasswordException
-    , UserAlreadyLoggedInException {
+    public LoginResponseDto login(LoginRequestDto loginRequestDto) {
+        String email = loginRequestDto.getEmail();
+        String password = loginRequestDto.getPassword();
         Optional<User> user = userRepository.findByEmail(email);
         if (user.isPresent()) {
             User existingUser = user.get();
             if(existingUser.isLoggedIn()){
-                throw new UserAlreadyLoggedInException("User already logged in");
+                throw new IllegalArgumentException("User already logged in");
             }
 
             if (passwordEncoder.matches(password, existingUser.getPassword())) {
-                // In real application, generate JWT or session token here
                 Token token = new Token();
                 token.setTokenValue(RandomStringUtils.randomAlphanumeric(128));
                 token.setUser(existingUser);
@@ -43,23 +52,26 @@ public class UserServiceImpl implements UserService {
                         .toInstant());
                 token.setExpiryDate(expiry);
                 existingUser.setLoggedIn(true);
-                return tokenRepository.save(token);
+                Token savedToken = tokenRepository.save(token);
+                return modelMapper.map(savedToken, LoginResponseDto.class);
             } else {
-                throw new InvalidUserNameOrPasswordException("Invalid username or password");
+                throw new IllegalArgumentException("Invalid username or password");
             }
         } else {
-//            redirect to signup page
-            throw new UserNotFoundException("User not found with email: " + email);
+            throw new UsernameNotFoundException("User not found with email: " + email);
         }
     }
 
     @Override
-    public User signup(String name, String email, String password) throws UserAlreadyExistsException{
+    public UserDto signup(SignUpRequestDto signUpRequestDto){
+        String name = signUpRequestDto.getUsername();
+        String email = signUpRequestDto.getEmail();
+        String password = signUpRequestDto.getPassword();
         Optional<User> user = userRepository.findByEmail(email);
         if (user.isPresent()) {
 //            we should not throw error here instead we should redirect to login page.
 //            throw new RuntimeException("User already exists with email: " + email);
-            throw new UserAlreadyExistsException("User already exists with email: " + email+". Please login instead." );
+            throw new IllegalArgumentException("User already exists with email: " + email+". Please login instead." );
         }
         User newUser = new User();
         newUser.setUsername(name);
@@ -67,14 +79,15 @@ public class UserServiceImpl implements UserService {
 
         newUser.setPassword(passwordEncoder.encode(password));
         newUser.setRoles(new ArrayList<>());
-        return userRepository.save(newUser);
+        User savedUser = userRepository.save(newUser);
+        return modelMapper.map(savedUser, UserDto.class);
     }
 
     @Override
-    public void logOut(String tokenValue) throws InvalidTokenException{
+    public void logOut(String tokenValue){
         Optional<Token> token = tokenRepository.findByTokenValue(tokenValue);
         if(token.isEmpty()){
-            throw new InvalidTokenException("Invalid token");
+            throw new IllegalArgumentException("Invalid token");
         }
         User user = token.get().getUser();
         user.setLoggedIn(false);
@@ -84,15 +97,46 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public User validateToken(String tokenValue) throws InvalidTokenException{
+    public UserDto validateToken(String tokenValue){
         Optional<Token> token = tokenRepository.findByTokenValueAndDeletedFalseAndExpiryDateGreaterThan(
                 tokenValue,
                 new Date()
         );
         if(token.isEmpty()){
-            throw new InvalidTokenException("Token is invalid or expired");
+            throw new IllegalArgumentException("Token is invalid or expired");
         }
-        return token.get().getUser();
+        return modelMapper.map(token.get().getUser(), UserDto.class);
 
+    }
+
+    @Override
+    public UserDto updateUser(Long id,LoginRequestDto loginRequestDto){
+        User user = userRepository.findById(id)
+                .orElseThrow(()-> new UsernameNotFoundException("User not found with id: "+id));
+
+        modelMapper.map(loginRequestDto, user);
+        User updatedUser = userRepository.save(user);
+        return modelMapper.map(updatedUser, UserDto.class);
+    }
+
+    @Override
+    public UserDto partialUpdateUser(Long id, Map<String, String> updates){
+        User user = userRepository.findById(id)
+                .orElseThrow(()-> new UsernameNotFoundException("User not found with id: "+id));
+
+        updates.forEach((field,value) -> {
+            switch (field){
+                case "username":
+                    user.setUsername(value);
+                    break;
+                case "email":
+                    user.setEmail(value);
+                    break;
+                default:
+                    throw new IllegalArgumentException("Invalid feild");
+            }
+        });
+        User updatedUser = userRepository.save(user);
+        return modelMapper.map(updatedUser, UserDto.class);
     }
 }

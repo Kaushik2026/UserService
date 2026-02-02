@@ -1,10 +1,12 @@
 package com.backendlld.userservice.dtos;
 
-import lombok.Getter;
-import lombok.Setter;
+import jakarta.validation.constraints.NotBlank;
+import lombok.*;
 
-@Getter
-@Setter
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
 public class LogOutRequestDto {
+    @NotBlank(message = "Token value is required")
     private String tokenValue;
 }

@@ -1,23 +1,23 @@
-package com.backendlld.userservice.services;
+package com.backendlld.userservice.security.services;
 
 import com.backendlld.userservice.dtos.LoginRequestDto;
 import com.backendlld.userservice.dtos.SignUpRequestDto;
 import com.backendlld.userservice.dtos.LoginResponseDto;
 import com.backendlld.userservice.dtos.UserDto;
-import org.springframework.stereotype.Service;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.oauth2.core.user.OAuth2User;
 
-@Service
-public interface UserService {
 
+public interface AuthService {
     LoginResponseDto login(LoginRequestDto loginRequestDto);
 
     UserDto signup(SignUpRequestDto signUpRequestDto);
 
-    void logOut(String tokenValue) ;
+    void logOut(Long id);
 
-    UserDto validateToken(String tokenValue);
-
-    UserDto updateUser(Long id,LoginRequestDto loginRequestDto) ;
+    UserDto updateUser(Long id,LoginRequestDto loginRequestDto);
 
     UserDto partialUpdateUser(Long id,java.util.Map<String,String> updates);
+
+    ResponseEntity<LoginResponseDto> handleOAuth2LoginRequest(OAuth2User oAuth2User, String registrationId);
 }
